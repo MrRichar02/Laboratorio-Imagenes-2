@@ -19,6 +19,7 @@ import cv2
 import torch
 import torch.nn as nn
 import os
+import joblib
 
 # ---------------------------------------------------------------------------
 # Clases del dataset Animals10 -- ordenadas alfabeticamente (LabelEncoder)
@@ -192,6 +193,19 @@ class App(tk.Tk):
 
         self._apply_style()
         self._build_ui()
+        self._scaler_hog = None
+        self._scaler_lbp = None
+        self._load_scalers()
+
+    def _load_scalers(self):
+        if os.path.exists("scaler_hog.pkl"):
+            self._scaler_hog = joblib.load("scaler_hog.pkl")
+        else:
+            print("Advertencia: scaler_hog.pkl no encontrado")
+        if os.path.exists("scaler_lbp.pkl"):
+            self._scaler_lbp = joblib.load("scaler_lbp.pkl")
+        else:
+            print("Advertencia: scaler_lbp.pkl no encontrado")
 
     # -- ttk dark theme ------------------------------------------------------
     def _apply_style(self):
@@ -465,9 +479,13 @@ class App(tk.Tk):
             # 1. Extraccion de caracteristicas
             if descriptor == "HOG":
                 features  = extract_hog(self._bgr128)
+                if self._scaler_hog is not None:
+                    features = self._scaler_hog.transform(features.reshape(1, -1)).flatten()
                 feat_info = f"HOG  |  {features.shape[0]} dim  |  cv2.HOGDescriptor"
             else:
                 features  = extract_lbp(self._bgr128)
+                if self._scaler_lbp is not None:
+                    features = self._scaler_lbp.transform(features.reshape(1, -1)).flatten()
                 feat_info = f"LBP  |  {features.shape[0]} dim  |  uniform r=3 + equalizeHist"
 
             # 2. Cargar modelo (con cache en memoria)
